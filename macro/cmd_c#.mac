@@ -1,0 +1,281 @@
+/*	C#の実行
+実行結果は「アウトプット枠」へ書き出します。
+
+【特徴】
+	思いついたコードをすぐ試せることを優先しています。
+	ファイルに保存していないC#を実行できます。
+
+【動作環境】
+	秀丸エディタ ver8.20 b14 で動作を確認。（ver8 以降なら動くはず。）
+
+【C#バージョン】
+	どのバージョンでも動くはずです。
+	バージョンの切り替えはマクロ中の $g_exe 変数を編集して下さい。
+	
+	インストールされているC#のバージョンは以下のディレクトリで確認できます。
+	C:\Windows\Microsoft.NET\Framework
+	C:\Windows\Microsoft.NET\Framework64
+
+【インストール】
+	秀丸のマクロディレクトリへコピーしたらキーアサインして下さい。
+
+【動作】
+	ファイル全体を対象とします。
+	ファイルへ保存しなくても実行できます。
+
+【連絡先】
+	http://d.hatena.ne.jp/ohtorii/
+	https://github.com/ohtorii
+*/
+
+
+//////////////////////////////////////////////////////////////////////////////
+//			ユーザーカスタマイズ
+//////////////////////////////////////////////////////////////////////////////
+
+//csc.exe へのパス
+//$g_exe	= "C:\\Windows\\Microsoft.NET\\Framework64\\v2.0.50727\\csc.exe";
+//$g_exe	= "C:\\Windows\\Microsoft.NET\\Framework64\\v3.5\\csc.exe";
+$g_exe	= "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe";
+//$g_exe	= "C:\\Windows\\Microsoft.NET\\Framework\\v2.0.50727\\csc.exe";
+//$g_exe	= "C:\\Windows\\Microsoft.NET\\Framework\\v3.5\\csc.exe";
+//$g_exe	= "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\csc.exe";
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////
+//			内部処理
+//////////////////////////////////////////////////////////////////////////////
+
+//テンポラリディレクトリ名
+$g_tmpdir_base_name = "hidemaru_c#_tmp_dir";
+
+//テンポラリファイル名
+//環境変数TMPのディレクトリに生成する。
+$g_tmpfile_base_name_cs = "hidemaru_c#_tmp_cs";
+$g_tmpfile_base_name_exe= "hidemaru_c#_tmp_exe";
+
+//コンパイルメッセージ
+$g_compile_message="";
+
+
+call Main;
+endmacro;
+
+
+Main:
+	$$save = searchbuffer;
+	##save = searchoption;
+	disablehistory 0x0001| 0x0002| 0x0004| 0x0008| 0x0010| 0x0020| 0x0040| 0x0080;
+	disabledraw;
+	disableinvert;
+	##old_x=x;
+	##old_y=y;
+	call Start;
+	moveto ##old_x,##old_y;
+	setsearch $$save, ##save;
+	return ##return ;
+
+
+Start:
+	$$tmp_in_filename_cs	= "";
+	$$tmp_in_filename_exe	= "";
+	##use_tmp_file			= true;
+	$$current_dir			= "";
+
+	//ソースコードをテンポラリファイルへコピーする。
+	call GetTempFile $g_tmpfile_base_name_cs, ".cs";
+	if(0==strlen($$return)){
+		return false;
+	}
+	$$tmp_in_filename_cs = $$return;
+
+	//exeのパス
+	call GetTempFile $g_tmpfile_base_name_exe, ".exe";
+	if(0==strlen($$return)){
+		return false;
+	}
+	$$tmp_in_filename_exe	= $$return;
+
+
+	##use_tmp_file		= true;
+	$$current_dir		= directory;
+
+	if(##use_tmp_file){
+		call MakeFile  $$tmp_in_filename_cs;
+		if(! ##return){
+			return false;
+		}
+	}
+
+	call SpawnCompiler $g_exe, $$current_dir, $$tmp_in_filename_exe, $$tmp_in_filename_cs;
+	if(false == ##return){
+		return false;
+	}
+
+	call SpawnExe $$tmp_in_filename_exe, $$current_dir;
+
+	if(##use_tmp_file){
+		deletefile $$tmp_in_filename_cs;
+		deletefile $$tmp_in_filename_exe;
+	}
+	return true;
+
+
+
+
+
+MakeFile:
+	$$tmp_filename	= $$1;
+	##old_charset	= charset;
+	selectall;
+	$$text=gettext(seltopx,seltopy,selendx,selendy);
+	##prev_hidemaru = hidemaruhandle(0);
+
+	openfile "/h " + $$tmp_filename;
+	if(! result){
+		message("テンポラリファイルのオープンに失敗。\n" + $$tmp_filename);
+		return false;
+	}
+	##new_hidemaru = hidemaruhandle(0);
+	setencode ##old_charset,1;
+	insert $$text;
+
+	save;
+	setactivehidemaru	##prev_hidemaru;
+	closehidemaruforced ##new_hidemaru;
+	return true;
+
+
+SpawnCompiler:
+	$$exe					= $$1;
+	$$current_dir			= $$2;
+	$$tmp_in_filename_exe	= $$3;
+	$$tmp_in_filename_cs	= $$4;
+
+	$$opt_out = "/out:\"" + $$tmp_in_filename_exe + "\"";
+	$$cmd = $$exe + " "
+			+ $$opt_out + " "
+			+ "\"" + $$tmp_in_filename_cs + "\"";
+
+	$$old_filename2 = filename2;
+	##prev_hidemaru = hidemaruhandle(0);
+	openfile "/h ";
+	if(! result){
+		message("非表示秀丸の起動に失敗。");
+		return false;
+	}
+	##new_hidemaru = hidemaruhandle(0);
+	runex $$cmd
+			, 1 			//sync	  0:async 1:sync
+			, 0, "" 		//stdin   0:none 1:auto 2:file 3:(reserve) 4:all 5:select
+			, 5, "" 		//stdout  0:none 1:auto 2:file 3:add file  4:new 5:insert 6:replace
+			, 1, "" 		//stderr  0:none 1:=out 2:file 3:add file  4:new 5:insert 6:replace
+			, 2, $$current_dir //folder  0:none 1:current 2:specify 3:(reserve) 4:exe's folder
+			, 2 			//show	  0:auto 1:show 2:hide
+			, 1 			//nodraw  0:draw 1:no draw
+			, 0 			//unicode 0:ansi 2:unicode
+			;
+	##ret = result;
+	##retex = getresultex(9);
+
+	//ファイル名がテンポラリファイルを指しているので置き換える。
+	gofiletop;
+	replaceallfast $$tmp_in_filename_cs,$$old_filename2,nocasesense,noregular;
+	selectall;
+	$g_compile_message=gettext(seltopx,seltopy,selendx,selendy);
+
+	setactivehidemaru	##prev_hidemaru;
+	closehidemaruforced ##new_hidemaru;
+	if(! ##ret){
+		message("runex で失敗。!result");
+		return false;
+	}
+	if(0 != ##retex){
+		//コンパイラの返値が成功以外
+		call WriteOutput $g_compile_message;
+		return false;
+	}
+	return true;
+
+
+SpawnExe:
+	$$exe 			= $$1;
+	$$current_dir	= $$2;
+	runex $$exe
+			, 1 			//sync	  0:async 1:sync
+			, 0, "" 		//stdin   0:none 1:auto 2:file 3:(reserve) 4:all 5:select
+			, 7, "" 		//stdout  0:none 1:auto 2:file 3:add file  4:new 5:insert 6:replace
+			, 1, "" 		//stderr  0:none 1:=out 2:file 3:add file  4:new 5:insert 6:replace
+			, 2, $$current_dir //folder  0:none 1:current 2:specify 3:(reserve) 4:exe's folder
+			, 2 			//show	  0:auto 1:show 2:hide
+			, 1 			//nodraw  0:draw 1:no draw
+			, 0 			//unicode 0:ansi 2:unicode
+			;
+	if(! result){
+		message("runex で失敗。!result");
+		return false;
+	}
+	//memo:exeの返値は無視する。
+	return true;
+
+
+//ディレクトリ作成
+CreateDir:
+	$$abs_dirname = $$1;
+	##obj = createobject("Scripting.FileSystemObject");
+	callmethod ##obj,"CreateFolder",$$abs_dirname;
+	##ret=callmethod_returnnum(##obj,"FolderExists",$$abs_dirname);
+	if(! ##ret){
+		message("テンポラリディレクトリの作成に失敗しました。\n" + $$abs_dirname);
+	}
+	releaseobject ##obj;
+	return ##ret;
+
+
+GetTempFile:
+	$$tmp_filename_base = $$1;
+	$$tmp_filename_ext 	= $$2;
+
+	$$tempdir = getenv("tmp");
+	if(0==strlen($$tempdir)){
+		message("環境変数 tmp が設定されていません、設定して下さい。");
+		return	false;
+	}
+
+	$$tempdir = $$tempdir + "\\" + $g_tmpdir_base_name;
+	call CreateDir $$tempdir;
+	if(! ##return){
+		return "";
+	}
+	$$tempdir = $$tempdir + "\\";
+
+	##n=0;
+	while(##n<1000){
+		$$tempfile = $$tempdir + $$tmp_filename_base + str(##n) + $$tmp_filename_ext;
+		if( !existfile( $$tempfile ) ) {
+			return $$tempfile;
+		}
+		##n = ##n + 1;
+	}
+
+	message "テンポラリファイルが作成できません\n" +
+			$$tempfile + "\n\n" +
+			"下記テンポラリディレクトリ内のファイルを全て削除してみて下さい。\n" +
+			$$tempdir;
+
+	return "";
+
+//アウトプット枠へ書き込む
+WriteOutput:
+	$$msg = $$1;
+	loaddll "HmOutputPane.dll";
+	//アウトプット枠を開く
+	#ret=dllfunc("Output",hidemaruhandle(0),"");
+	//クリアする
+	#h=dllfunc("GetWindowHandle",hidemaruhandle(0));
+	#ret=sendmessage(#h,0x111/*WM_COMMAND*/,1009,0);
+	//メッセージを書き込む
+	#ret=dllfunc("Output",hidemaruhandle(0),$$msg);
+	return ;
