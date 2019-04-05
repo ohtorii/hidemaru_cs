@@ -15,5 +15,5 @@
 ### C#のバージョン
 - バージョンの切り替えはマクロ中の $g_exe 変数を編集して下さい。
 - インストールされているC#のバージョンは以下のディレクトリで確認できます。
--- C:\Windows\Microsoft.NET\Framework
--- C:\Windows\Microsoft.NET\Framework64
+	- C:\Windows\Microsoft.NET\Framework
+	- C:\Windows\Microsoft.NET\Framework64
