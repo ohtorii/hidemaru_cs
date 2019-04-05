@@ -1,19 +1,19 @@
-#�G�ۃG�f�B�^��C#�����s����}�N��
+# 秀丸エディタでC#を実行するマクロ
 
-##�T�v
-�G�ۃG�f�B�^��C#�̃\�[�X�R�[�h�����s���܂��B
+## 概要
+秀丸エディタでC#のソースコードを実行します。
 
-###�X�N���[���V���b�g
-- ![C# hidemaru](http://cdn-ak.f.st-hatena.com/images/fotolife/o/ohtorii/20120603/20120603000152.gif?1338649922 "C# �G�ۃG�f�B�^")
+### スクリーンショット
+- ![C# hidemaru](http://cdn-ak.f.st-hatena.com/images/fotolife/o/ohtorii/20120603/20120603000152.gif?1338649922 "C# 秀丸エディタ")
 
-###�C���X�g�[�����@
-- �G�ۂ̃}�N���f�B���N�g���փR�s�[������L�[�A�T�C�����ĉ������B
+### インストール方法
+- 秀丸のマクロディレクトリへコピーしたらキーアサインして下さい。
 
-##�����
-- �G�ۃG�f�B�^ ver8.20 b14 �œ�����m�F�Aver8�ȍ~�Ȃ瓮���͂��B
+## 動作環境
+- 秀丸エディタ ver8.20 b14 で動作を確認、ver8以降なら動くはず。
 
-### C#�̃o�[�W����
-- �o�[�W�����̐؂�ւ��̓}�N������ $g_exe �ϐ���ҏW���ĉ������B
-- �C���X�g�[������Ă���C#�̃o�[�W�����͈ȉ��̃f�B���N�g���Ŋm�F�ł��܂��B
+### C#のバージョン
+- バージョンの切り替えはマクロ中の $g_exe 変数を編集して下さい。
+- インストールされているC#のバージョンは以下のディレクトリで確認できます。
 -- C:\Windows\Microsoft.NET\Framework
 -- C:\Windows\Microsoft.NET\Framework64
